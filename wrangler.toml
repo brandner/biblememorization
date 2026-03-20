@@ -1,0 +1,7 @@
+name = "bible-memorization"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-03-01"
+
+[[kv_namespaces]]
+binding = "USER_DATA"
+id = "f7d7f064b954452db87a5a66c449ee9a"
