@@ -54,8 +54,14 @@
           </div>
 
           <div class="scripture-text" id="home-text"></div>
-          <span class="scripture-reference" id="home-ref"></span>
-          <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
+
+          <!-- Reference row: ref · translation badge · ▶ button -->
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+            <span class="scripture-reference" id="home-ref" style="display: inline; text-align: unset; margin: 0;"></span>
+            <button id="btn-home-audio" title="Listen to this passage" style="background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: 20px; padding: 0.2rem 0.65rem; font-size: 0.78rem; font-weight: 500; white-space: nowrap;">&#9654; Listen (ESV)</button>
+          </div>
+
+          <div style="margin-top: 1.25rem; display: flex; gap: 1rem; justify-content: center;">
               <button id="btn-practice">Practice Now</button>
               <button id="btn-new-verse" style="background: transparent; color: var(--text-secondary); border: 1px solid currentColor;">Choose New</button>
           </div>
@@ -106,12 +112,36 @@
         </p>
 
         <div class="scripture-text" id="practice-text"></div>
-        <span class="scripture-reference" id="practice-ref"></span>
+
+        <!-- Reference row: ref · translation badge · ▶ button -->
+        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+          <span class="scripture-reference" id="practice-ref" style="display: inline; text-align: unset; margin: 0;"></span>
+          <button id="btn-practice-audio" title="Listen to this passage" style="background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: 20px; padding: 0.2rem 0.65rem; font-size: 0.78rem; font-weight: 500; white-space: nowrap;">&#9654; Listen (ESV)</button>
+        </div>
 
         <!-- Sequential Step Flow (Feature 2) -->
         <div id="practice-step-flow" style="margin-top: 1.5rem; display: none; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
             <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); margin-bottom: 0.5rem;">Step <span id="step-current">1</span> of <span id="step-total">5</span></div>
             <div id="step-text" style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1rem; line-height: 1.4;"></div>
+
+            <!-- Inline audio sub-panel (shown on 'audio' steps) -->
+            <div id="step-inline-audio" style="display: none; margin-bottom: 1rem;">
+              <button id="btn-step-play" style="width: 100%; background: transparent; color: var(--accent-color); border: 1px solid var(--accent-color);">&#9654; Play (ESV)</button>
+            </div>
+
+            <!-- Inline recite sub-panel (shown on 'recite' steps) -->
+            <div id="step-inline-recite" style="display: none; margin-bottom: 1rem;">
+              <button id="btn-recite-toggle" style="width: 100%; margin-bottom: 0.75rem;">🎙️ Start Reciting</button>
+              <div id="recitation-result" style="display: none;">
+                <div id="recitation-score-bar" style="height: 6px; background: var(--border-color); border-radius: 3px; margin-bottom: 0.6rem; overflow: hidden;">
+                  <div id="recitation-score-fill" style="height: 100%; border-radius: 3px; transition: width 0.4s ease; width: 0%;"></div>
+                </div>
+                <div id="recitation-score-label" style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); text-align: center; margin-bottom: 0.75rem;"></div>
+                <div id="recitation-diff" style="font-size: 0.9rem; line-height: 1.7; word-wrap: break-word;"></div>
+                <button id="btn-recite-again" style="width: 100%; margin-top: 0.75rem; background: transparent; color: var(--accent-color); border: 1px solid var(--accent-color);">Try Again</button>
+              </div>
+            </div>
+
             <div id="step-progress-bar" style="height: 4px; background: var(--border-color); border-radius: 2px; margin-bottom: 1.25rem;">
                 <div id="step-progress-fill" style="height: 100%; background: var(--accent-color); border-radius: 2px; transition: width 0.3s ease; width: 0%;"></div>
             </div>
@@ -166,7 +196,8 @@
             <label for="profile-translation-select" style="font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.5rem; text-align: left;">Preferred Translation</label>
             <select id="profile-translation-select" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-primary); margin-bottom: 2rem; font-size: 1rem; cursor: pointer;">
                 <option value="esv">ESV (English Standard Version)</option>
-                <option value="web">WEB (World English Bible)</option>
+                <option value="niv">NIV (New International Version)</option>
+                <option value="msg">MSG (The Message)</option>
             </select>
             
             <div style="background: var(--surface-color); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 12px; text-align: left; margin-bottom: 2rem;">

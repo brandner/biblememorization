@@ -14,7 +14,7 @@ export interface AppState {
   uid: string;
   userName?: string;
   avatar?: string;
-  preferredTranslation?: 'esv' | 'web'; // persisted translation preference
+  preferredTranslation?: 'esv' | 'niv' | 'msg' | 'web'; // persisted translation preference
   activeVerse: VerseState | null;
   memorizedVerses: VerseState[]; // Note: 'text' may be omitted to save space
 }
