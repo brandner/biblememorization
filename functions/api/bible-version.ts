@@ -91,8 +91,8 @@ function referenceToPassageId(reference: string): string | null {
     'revelation': 'REV', 'rev': 'REV',
   };
 
-  // Parse: "Book Chapter:Verse" or "Book Chapter:VerseStart-VerseEnd"
-  const match = reference.trim().match(/^(.+?)\s+(\d+):(\d+)(?:-(\d+))?$/i);
+  // Parse: "Book Chapter" or "Book Chapter:Verse" or "Book Chapter:VerseStart-VerseEnd"
+  const match = reference.trim().match(/^(.+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?$/i);
   if (!match) return null;
 
   const bookRaw = match[1].toLowerCase().trim();
@@ -102,6 +102,10 @@ function referenceToPassageId(reference: string): string | null {
 
   const bookCode = BOOK_MAP[bookRaw];
   if (!bookCode) return null;
+
+  if (!verseStart) {
+    return `${bookCode}.${chapter}`;
+  }
 
   const startId = `${bookCode}.${chapter}.${verseStart}`;
   if (verseEnd) {

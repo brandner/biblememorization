@@ -864,7 +864,7 @@ async function fetchFromBibleApi(reference: string) {
             result = await tryFetch('web');
         }
 
-        const { data } = result;
+        const { data, translation } = result;
         
         if (appState) {
             appState.activeVerse = {
@@ -872,7 +872,7 @@ async function fetchFromBibleApi(reference: string) {
                 text: data.text.trim(),
                 day: 1,
                 lastPracticed: null,
-                translation: preferredTranslation, // always label with what the user chose
+                translation: translation,
                 startedDate: new Date().toISOString(),
                 completed: false
             };
