@@ -100,12 +100,12 @@ function stopAudio() {
 
 /**
  * Normalise a string for loose word comparison:
- * lowercase, strip punctuation, collapse whitespace.
+ * lowercase, strip punctuation and numbers, collapse whitespace.
  */
 function normaliseWords(str: string): string[] {
   return str
     .toLowerCase()
-    .replace(/[^a-z0-9\s']/g, '')
+    .replace(/[^a-z\s']/g, '')
     .replace(/\s+/g, ' ')
     .trim()
     .split(' ')
