@@ -11,6 +11,7 @@
 
 const BIBLE_IDS: Record<string, string> = {
   niv: '78a9f6124f344018-01',
+  nkjv: '63097d2a0a2f7db3-01',
   msg: '6f11a7de016f942e-01',
 };
 

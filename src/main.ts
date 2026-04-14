@@ -25,12 +25,13 @@ function hasSpeechRecognition(): boolean {
 
 /** Returns the label to show on the audio button based on which audio source is used. */
 function audioSourceLabel(translation: string, verb: 'Listen' | 'Play' = 'Listen'): string {
-  return translation === 'esv' ? `▶ ${verb} (ESV)` : `▶ ${verb} (Web)`;
+  const t = translation ? translation.toUpperCase() : 'ESV';
+  return `▶ ${verb} (${t})`;
 }
 
 /**
  * Play the passage audio. For ESV, streams from our Cloudflare proxy.
- * For WEB / NIV / MSG (or if ESV proxy fails), falls back to browser SpeechSynthesis.
+ * For WEB / NIV / MSG, tries Google TTS proxy, and falls back to browser SpeechSynthesis.
  */
 function playAudio(
   text: string,
@@ -42,7 +43,6 @@ function playAudio(
   stopAudio();
 
   const originalLabel = btnEl.innerText;
-  btnEl.innerText = '⏹ Stop';
 
   const onDone = () => {
     btnEl.innerText = originalLabel;
@@ -51,33 +51,78 @@ function playAudio(
   };
 
   if (translation === 'esv') {
+    btnEl.innerText = '📢 Stop (ESV)';
     // Use ESV audio API proxy — returns an MP3 stream
     const audio = new Audio(`/api/esv-audio?q=${encodeURIComponent(reference)}`);
     activeAudio = audio;
+    
+    let fallbackTriggered = false;
+    const triggerFallback = () => {
+      if (fallbackTriggered) return;
+      fallbackTriggered = true;
+      activeAudio = null;
+      console.warn("ESV audio failed. Falling back to web speech.");
+      useSpeechSynthesis(text, onDone, btnEl);
+    };
+
     audio.addEventListener('ended', onDone);
-    audio.addEventListener('error', () => {
-      // Proxy failed (e.g. dev mode without API key): fall back to TTS
-      activeAudio = null;
-      useSpeechSynthesis(text, onDone, btnEl);
-    });
-    audio.play().catch(() => {
-      // Auto-play blocked or unavailable
-      activeAudio = null;
-      useSpeechSynthesis(text, onDone, btnEl);
-    });
+    audio.addEventListener('error', triggerFallback);
+    audio.play().catch(triggerFallback);
   } else {
-    useSpeechSynthesis(text, onDone, btnEl);
+    btnEl.innerText = '🎙️ Stop (Google TTS)';
+    const audio = new Audio(`/api/google-tts?text=${encodeURIComponent(text)}`);
+    activeAudio = audio;
+
+    let fallbackTriggered = false;
+    const triggerFallback = () => {
+      if (fallbackTriggered) return;
+      fallbackTriggered = true;
+      activeAudio = null;
+      console.error("Google TTS failed. Please check API key and GCP project settings.");
+      onDone();
+    };
+
+    audio.addEventListener('ended', onDone);
+    audio.addEventListener('error', triggerFallback);
+    audio.play().catch(triggerFallback);
   }
+}
+
+function playLocalSpeech(text: string, btnEl: HTMLButtonElement) {
+  stopAudio();
+  const originalLabel = btnEl.innerText;
+  const onDone = () => {
+    btnEl.innerText = originalLabel;
+    speechSynth = null;
+  };
+  useSpeechSynthesis(text, onDone, btnEl);
 }
 
 function useSpeechSynthesis(text: string, onDone: () => void, btnEl: HTMLButtonElement) {
   if (!window.speechSynthesis) {
-    btnEl.innerText = '🔊 Listen';
+    onDone();
     return;
   }
+  btnEl.innerText = '🤖 Stop (Local Browser)';
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = 0.85;
   utterance.lang = 'en-US';
+
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    const preferredVoice = voices.find(v => 
+      v.name.includes('Google UK English Male') ||
+      v.name.includes('Alex') ||
+      v.name.includes('Daniel') ||
+      v.name.includes('Fred') ||
+      (v.lang === 'en-US' && !v.localService && v.name.includes('Male'))
+    ) || voices.find(v => v.lang.startsWith('en-'));
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+  }
+
   utterance.onend = onDone;
   utterance.onerror = onDone;
   speechSynth = utterance;
@@ -249,29 +294,29 @@ interface PracticeStep {
 // Both are optional (skip-able) so users without headphones/mic aren't blocked.
 const PRACTICE_STEPS: Record<string, PracticeStep[]> = {
   familiarization: [
-    { type: 'audio',       text: '🔊 Listen to the passage — hear the rhythm and phrasing before reading.', optional: true },
-    { type: 'instruction', text: '📖 Read the passage aloud — first time through.' },
-    { type: 'instruction', text: '📖 Read it aloud again — second time. Notice the rhythm.' },
-    { type: 'instruction', text: '📖 Third read-aloud. Start connecting phrases.' },
-    { type: 'instruction', text: '📖 Final read-aloud — read it like you mean every word.' },
-    { type: 'instruction', text: '✍️ Write it out by hand from beginning to end.' },
+    { type: 'audio',       text: '🔊 Listen to the passage — pay close attention to the rhythm and phrasing before reading.', optional: true },
+    { type: 'instruction', text: '📖 Read the passage aloud — go slowly for the first time through to ensure every word is correct.' },
+    { type: 'instruction', text: '📖 Read it aloud again — this time, try to group words together into natural phrases.' },
+    { type: 'instruction', text: '📖 Third read-aloud. Start mentally connecting the phrases to visual images or concepts in your mind.' },
+    { type: 'instruction', text: '📖 Final read-aloud — read it with emphasis and feeling, as if you were teaching it to someone else.' },
+    { type: 'instruction', text: '✍️ Write it out by hand from beginning to end on a physical piece of paper. This dramatically improves retention.' },
   ],
   partialRecall: [
-    { type: 'recite',      text: '🎙️ Try reciting the verse from memory — no pressure, just a first attempt.', optional: true },
-    { type: 'instruction', text: '🧠 Cover the text and try to say the verse from memory.' },
-    { type: 'instruction', text: '👁️ Check the hints — tap any blanked word you truly forgot.' },
-    { type: 'instruction', text: '📖 Read the full verse once more to reinforce what you missed.' },
+    { type: 'recite',      text: '🎙️ Try reciting the verse from memory — no pressure, just a first attempt to see what stuck.', optional: true },
+    { type: 'instruction', text: '🧠 Look away from the screen and try your best to speak the entire passage out loud from memory.' },
+    { type: 'instruction', text: '👁️ Check the screen for hints — only tap a blank word if you are truly stuck and cannot remember it.' },
+    { type: 'instruction', text: '📖 Read the full verse aloud once more to reinforce the specific words that you missed.' },
   ],
   advancedRecall: [
-    { type: 'recite',      text: '🎙️ Recite the entire passage — say it aloud before looking at the screen.', optional: true },
-    { type: 'instruction', text: '🧠 Recite the entire passage without looking at the screen.' },
-    { type: 'instruction', text: '👁️ Only tap a word if you are completely stuck — resist the urge!' },
-    { type: 'instruction', text: '📖 Read it through once from beginning to end to confirm.' },
+    { type: 'recite',      text: '🎙️ Recite the entire passage — try to say the whole thing aloud confidently before checking the screen.', optional: true },
+    { type: 'instruction', text: '🧠 Recite the entire passage out loud without looking at the screen at all.' },
+    { type: 'instruction', text: '👁️ Tap a word only if you absolutely must. Resist the urge to peek — let your brain work to recall it!' },
+    { type: 'instruction', text: '📖 Read it through out loud once from beginning to end to confirm you had it completely right.' },
   ],
   fullRecall: [
-    { type: 'recite',      text: '🎙️ Say the entire passage from memory — record your attempt.', optional: true },
-    { type: 'instruction', text: '🏆 Recite the entire passage perfectly from memory — no hints.' },
-    { type: 'instruction', text: '✅ If you got it, you\'re done! Mark it complete.' },
+    { type: 'recite',      text: '🎙️ Say the entire passage flawlessly from memory — record your attempt and aim for 100%.', optional: true },
+    { type: 'instruction', text: '🏆 Recite the entire passage out loud perfectly from memory. Don\'t rely on any hints or peeking.' },
+    { type: 'instruction', text: '✅ If you got every single word right, you\'re done! Mark your practice complete with confidence.' },
   ],
 };
 
@@ -412,8 +457,17 @@ function renderHomeView() {
 
   // Audio button shows the audio source, not the text translation
   const homeAudioBtn = document.getElementById('btn-home-audio') as HTMLButtonElement | null;
+  const homeAudioWebBtn = document.getElementById('btn-home-audio-web') as HTMLButtonElement | null;
   if (homeAudioBtn) {
     homeAudioBtn.innerText = audioSourceLabel(homeTrans);
+  }
+  if (homeAudioWebBtn) {
+    if (homeTrans !== 'esv') {
+      homeAudioWebBtn.style.display = 'inline-block';
+      homeAudioWebBtn.innerText = '▶ Listen (Web)';
+    } else {
+      homeAudioWebBtn.style.display = 'none';
+    }
   }
 
   // Today's Method pill
@@ -495,8 +549,17 @@ function renderPracticeView(overrideVerse?: import('./utils/storage').VerseState
     const practiceTrans = ((verse as any).translation || 'esv') as string;
     document.getElementById('practice-ref')!.innerText = `${verse.reference} (${practiceTrans.toUpperCase()})`;
     const practiceAudioBtn = document.getElementById('btn-practice-audio') as HTMLButtonElement | null;
+    const practiceAudioWebBtn = document.getElementById('btn-practice-audio-web') as HTMLButtonElement | null;
     if (practiceAudioBtn) {
       practiceAudioBtn.innerText = audioSourceLabel(practiceTrans);
+    }
+    if (practiceAudioWebBtn) {
+      if (practiceTrans !== 'esv') {
+        practiceAudioWebBtn.style.display = 'inline-block';
+        practiceAudioWebBtn.innerText = '▶ Listen (Web)';
+      } else {
+        practiceAudioWebBtn.style.display = 'none';
+      }
     }
 
     // Step flow (Feature 2) — only for active (non-review) practice
@@ -568,9 +631,19 @@ function renderCurrentStep() {
         inlineAudio.style.display = 'block';
         // Reset the inline play button label
         const playBtn = document.getElementById('btn-step-play') as HTMLButtonElement;
+        const playWebBtn = document.getElementById('btn-step-play-web') as HTMLButtonElement | null;
         const verse = appState?.activeVerse;
         if (playBtn && verse) {
-            playBtn.innerText = audioSourceLabel((verse as any).translation || 'esv', 'Play');
+            const trans = (verse as any).translation || 'esv';
+            playBtn.innerText = audioSourceLabel(trans, 'Play');
+            if (playWebBtn) {
+                if (trans !== 'esv') {
+                    playWebBtn.style.display = 'inline-block';
+                    playWebBtn.innerText = '▶ Play (Web)';
+                } else {
+                    playWebBtn.style.display = 'none';
+                }
+            }
         }
         nextBtn.innerText = isLast ? 'Mark All Steps Done ✓' : (step.optional ? 'Skip →' : 'Next Step →');
     } else if (step.type === 'recite') {
@@ -592,7 +665,7 @@ async function reviewVerseAndStamp(reference: string, translation: string) {
     let apiUrl: string;
     if (translation === 'esv') {
         apiUrl = `/api/esv?q=${encodeURIComponent(reference)}`;
-    } else if (translation === 'niv' || translation === 'msg') {
+    } else if (translation === 'niv' || translation === 'nkjv' || translation === 'msg') {
         apiUrl = `/api/bible-version?q=${encodeURIComponent(reference)}&version=${translation}`;
     } else {
         apiUrl = `https://bible-api.com/${encodeURIComponent(reference)}`;
@@ -756,6 +829,76 @@ document.getElementById('btn-new-verse')?.addEventListener('click', () => {
   switchView('selection');
 });
 
+document.getElementById('btn-extend-verse')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!appState?.activeVerse) return;
+
+    const btn = document.getElementById('btn-extend-verse') as HTMLButtonElement;
+    const oldText = btn.innerText;
+    btn.innerText = 'Extending...';
+    btn.disabled = true;
+
+    try {
+        const ref = appState.activeVerse.reference.trim();
+        const match = ref.match(/^(.*?)\s+(\d+):(\d+)(?:-(\d+))?$/);
+        if (!match) {
+            console.error("Could not parse reference for extension:", ref);
+            return;
+        }
+
+        const book = match[1].trim();
+        const chapter = match[2];
+        const startVerse = match[3];
+        const endVerse = match[4] || startVerse;
+
+        const nextVerseNum = parseInt(endVerse, 10) + 1;
+        const newRef = `${book} ${chapter}:${startVerse}-${nextVerseNum}`;
+
+        const preferredTranslation = appState.preferredTranslation ?? 'esv';
+
+        async function tryFetch(translation: string): Promise<{ data: any; translation: string }> {
+            let apiUrl: string;
+            if (translation === 'esv') {
+                apiUrl = `/api/esv?q=${encodeURIComponent(newRef)}`;
+            } else if (translation === 'niv' || translation === 'nkjv' || translation === 'msg') {
+                apiUrl = `/api/bible-version?q=${encodeURIComponent(newRef)}&version=${translation}`;
+            } else {
+                apiUrl = `https://bible-api.com/${encodeURIComponent(newRef)}`;
+            }
+            const res = await fetch(apiUrl);
+            if (!res.ok) throw new Error(`${translation} fetch failed: ${res.status}`);
+            const data = await res.json();
+            return { data, translation };
+        }
+
+        let result: { data: any; translation: string };
+        try {
+            result = await tryFetch((appState.activeVerse as any).translation || preferredTranslation);
+        } catch {
+            result = await tryFetch('web');
+        }
+
+        const { data, translation } = result;
+
+        // Update the active verse while keeping the startedDate, but reset the day
+        appState.activeVerse.reference = data.reference || newRef;
+        appState.activeVerse.text = data.text.trim();
+        appState.activeVerse.day = 1;
+        appState.activeVerse.lastPracticed = null;
+        (appState.activeVerse as any).translation = translation;
+        appState.activeVerse.completed = false;
+        
+        await saveState(appState);
+        renderHomeView();
+    } catch (err) {
+        console.error("Could not extend verse.", err);
+        // Instead of an alert, we log it to prevent any browser popup flicker UI issues
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+});
+
 document.getElementById('btn-start-new-verse')?.addEventListener('click', () => {
   switchView('selection');
 });
@@ -843,7 +986,7 @@ async function fetchFromBibleApi(reference: string) {
         let apiUrl: string;
         if (translation === 'esv') {
             apiUrl = `/api/esv?q=${encodeURIComponent(reference)}`;
-        } else if (translation === 'niv' || translation === 'msg') {
+        } else if (translation === 'niv' || translation === 'nkjv' || translation === 'msg') {
             apiUrl = `/api/bible-version?q=${encodeURIComponent(reference)}&version=${translation}`;
         } else {
             // WEB (internal fallback)
@@ -919,7 +1062,7 @@ document.getElementById('btn-save-profile')?.addEventListener('click', async () 
     appState.userName = input.value.trim();
     // Save translation preference (Feature 4)
     const transSelect = document.getElementById('profile-translation-select') as HTMLSelectElement;
-    if (transSelect) appState.preferredTranslation = transSelect.value as 'esv' | 'niv' | 'msg' | 'web';
+    if (transSelect) appState.preferredTranslation = transSelect.value as 'esv' | 'niv' | 'nkjv' | 'msg' | 'web';
     await saveState(appState);
     updateProfileHeader();
     document.getElementById('btn-back-from-profile')?.click();
@@ -1011,6 +1154,18 @@ document.getElementById('btn-home-audio')?.addEventListener('click', (e) => {
     playAudio(verse.text || '', verse.reference, trans, btn);
 });
 
+document.getElementById('btn-home-audio-web')?.addEventListener('click', (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    if (activeAudio || window.speechSynthesis?.speaking) {
+        stopAudio();
+        btn.innerText = '▶ Listen (Web)';
+        return;
+    }
+    const verse = appState?.activeVerse;
+    if (!verse) return;
+    playLocalSpeech(verse.text || '', btn);
+});
+
 // Practice view: ▶ Listen button
 document.getElementById('btn-practice-audio')?.addEventListener('click', (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
@@ -1023,6 +1178,18 @@ document.getElementById('btn-practice-audio')?.addEventListener('click', (e) => 
     const verse = appState?.activeVerse;
     if (!verse) return;
     playAudio(verse.text || '', verse.reference, trans, btn);
+});
+
+document.getElementById('btn-practice-audio-web')?.addEventListener('click', (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    if (activeAudio || window.speechSynthesis?.speaking) {
+        stopAudio();
+        btn.innerText = '▶ Listen (Web)';
+        return;
+    }
+    const verse = appState?.activeVerse;
+    if (!verse) return;
+    playLocalSpeech(verse.text || '', btn);
 });
 
 // Practice view: Start / Stop Reciting
@@ -1054,6 +1221,18 @@ document.getElementById('btn-step-play')?.addEventListener('click', (e) => {
     const verse = appState?.activeVerse;
     if (!verse) return;
     playAudio(verse.text || '', verse.reference, trans, btn);
+});
+
+document.getElementById('btn-step-play-web')?.addEventListener('click', (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    if (activeAudio || window.speechSynthesis?.speaking) {
+        stopAudio();
+        btn.innerText = '▶ Play (Web)';
+        return;
+    }
+    const verse = appState?.activeVerse;
+    if (!verse) return;
+    playLocalSpeech(verse.text || '', btn);
 });
 
 // Start the app

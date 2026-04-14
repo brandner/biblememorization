@@ -59,10 +59,12 @@
           <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
             <span class="scripture-reference" id="home-ref" style="display: inline; text-align: unset; margin: 0;"></span>
             <button id="btn-home-audio" title="Listen to this passage" style="background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: 20px; padding: 0.2rem 0.65rem; font-size: 0.78rem; font-weight: 500; white-space: nowrap;">&#9654; Listen (ESV)</button>
+            <button id="btn-home-audio-web" title="Listen with local browser" style="display: none; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: 20px; padding: 0.2rem 0.65rem; font-size: 0.78rem; font-weight: 500; white-space: nowrap;">&#9654; Listen (Web)</button>
           </div>
 
-          <div style="margin-top: 1.25rem; display: flex; gap: 1rem; justify-content: center;">
+          <div style="margin-top: 1.25rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
               <button id="btn-practice">Practice Now</button>
+              <button id="btn-extend-verse" style="background: transparent; color: var(--text-secondary); border: 1px solid currentColor;" title="Add the next verse to your current selection">+ Extend</button>
               <button id="btn-new-verse" style="background: transparent; color: var(--text-secondary); border: 1px solid currentColor;">Choose New</button>
           </div>
           <div style="margin-top: 1rem; text-align: center;">
@@ -117,6 +119,7 @@
         <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
           <span class="scripture-reference" id="practice-ref" style="display: inline; text-align: unset; margin: 0;"></span>
           <button id="btn-practice-audio" title="Listen to this passage" style="background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: 20px; padding: 0.2rem 0.65rem; font-size: 0.78rem; font-weight: 500; white-space: nowrap;">&#9654; Listen (ESV)</button>
+          <button id="btn-practice-audio-web" title="Listen with local browser" style="display: none; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: 20px; padding: 0.2rem 0.65rem; font-size: 0.78rem; font-weight: 500; white-space: nowrap;">&#9654; Listen (Web)</button>
         </div>
 
         <!-- Sequential Step Flow (Feature 2) -->
@@ -126,7 +129,10 @@
 
             <!-- Inline audio sub-panel (shown on 'audio' steps) -->
             <div id="step-inline-audio" style="display: none; margin-bottom: 1rem;">
-              <button id="btn-step-play" style="width: 100%; background: transparent; color: var(--accent-color); border: 1px solid var(--accent-color);">&#9654; Play (ESV)</button>
+              <div style="display: flex; gap: 0.5rem;">
+                <button id="btn-step-play" style="flex: 1; background: transparent; color: var(--accent-color); border: 1px solid var(--accent-color);">&#9654; Play (ESV)</button>
+                <button id="btn-step-play-web" style="flex: 1; display: none; background: transparent; color: var(--accent-color); border: 1px solid var(--accent-color);">&#9654; Play (Web)</button>
+              </div>
             </div>
 
             <!-- Inline recite sub-panel (shown on 'recite' steps) -->
@@ -197,6 +203,7 @@
             <select id="profile-translation-select" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-primary); margin-bottom: 2rem; font-size: 1rem; cursor: pointer;">
                 <option value="esv">ESV (English Standard Version)</option>
                 <option value="niv">NIV (New International Version)</option>
+                <option value="nkjv">NKJV (New King James Version)</option>
                 <option value="msg">MSG (The Message)</option>
             </select>
             
